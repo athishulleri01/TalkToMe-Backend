@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  rabbitmq:
+    restart: always
+    image: "rabbitmq:3-management"
+    container_name: "rabbitmq_container"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "guest"
+      RABBITMQ_DEFAULT_PASS: "guest"
+      
+  redis:
+    image: redis:latest
+    container_name: user-redis
+    ports:
+      - "6379:6379"
+
+  api_gateway:
+    build:
+      context: ./backend/api_gateway
+      dockerfile: Dockerfile
+    image: backend:api_gateway
+    container_name: api-gateway
+    command: sh -c "chmod +x ./migrate.sh && chmod +x ./entrypoint.sh && sh ./migrate.sh && ./entrypoint.sh"
+    ports:
+      - 8000:8000
+    restart: always
+    env_file:
+      - ./backend/api_gateway/.env
+    volumes:
+      - ./backend/api_gateway:/app
+    networks:
+      - mynetwork
+
+  auth_service:
+    build:
+      context: ./backend/auth_service
+      dockerfile: Dockerfile
+    image: backend:auth_service
+    container_name: auth_service
+    command: sh -c "chmod +x ./migrate.sh && chmod +x ./entrypoint.sh && sh ./migrate.sh && ./entrypoint.sh"
+    ports:
+      - 8001:8000
+    restart: always
+    env_file:
+      - ./backend/auth_service/.env
+    volumes:
+      - ./backend/auth_service:/app
+    depends_on:
+      - redis
+      - rabbitmq
+    networks:
+      - mynetwork
+
+  user_celery_worker:
+    restart: always
+    build:
+      context: ./backend/auth_service
+    env_file:
+      - ./backend/auth_service/.env
+    container_name: user-celery-worker
+    command: celery -A auth worker --loglevel=info
+    volumes:
+      - ./backend/auth_service:/code-auth-service
+    depends_on:
+      - redis
+
+networks:
+  mynetwork:
+    driver: bridge

@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+
+  notification_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: backend:notification-service
+    container_name: notification-service
+    command: python consumer.py
+    ports:
+      - 8006:8000
+    restart: always
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_VIRTUAL_HOST: /
+    networks:
+      - common_network
+
+networks:
+  common_network:
+    external: true

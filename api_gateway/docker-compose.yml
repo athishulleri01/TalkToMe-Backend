@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  
+  api_gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: backend:api_gateway
+    container_name: api-gateway
+    command: sh -c "chmod +x ./migrate.sh && chmod +x ./entrypoint.sh && sh ./migrate.sh && ./entrypoint.sh"
+    ports:
+      - 8000:8000
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./backend/api_gateway:/app
+    networks:
+      - api_gate
+      - auth
+
+  
+
+networks:
+  api_gate:
+  auth:
+    external:
+      name: auth
